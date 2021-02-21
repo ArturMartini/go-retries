@@ -30,8 +30,8 @@ import retry "github.com/arturmartini/go-retries"
 func example(any string) error {
     //Setting max retries, delay time and errors unrecoverable
     retry.Setting(map[Config]int{
-    		ConfigMaxRetries: 5,
-    		ConfigDelaySec: 2,
+    		retry.ConfigMaxRetries: 5,
+    		retry.ConfigDelaySec: 2,
     	}, []error{errors.New("Unrecoverable")})
     
     errRetry := retry.Do(func() error) error {
