@@ -92,11 +92,7 @@ func panicRecovery(f func() interface{}, retry *int, continueRecovery *bool) {
 		r := recover()
 		if r != nil {
 			*retry++
-			if *retry <= configs[ConfigMaxRetries] {
-				execRetry(f, retry, continueRecovery)
-			} else {
-				*continueRecovery = false
-			}
+			execRetry(f, retry, continueRecovery)
 		}
 	}
 }
