@@ -7,7 +7,7 @@ import (
 )
 
 func TestRetry(t *testing.T) {
-	err := Do(func() error {
+	err := Do(func() interface{} {
 		return nil
 	})
 
@@ -19,7 +19,7 @@ func TestRetryRecover(t *testing.T) {
 
 	recError := errors.New("recoverable")
 	SetRecoverableErrors(recError)
-	err := Do(func() error {
+	err := Do(func() interface{} {
 		if retry < 2 {
 			retry++
 			return recError
@@ -34,7 +34,7 @@ func TestRetryRecover(t *testing.T) {
 
 func TestUnrecover(t *testing.T) {
 	unrecoverableError := errors.New("unrecoverable")
-	err := Do(func() error {
+	err := Do(func() interface{} {
 		return unrecoverableError
 	})
 
@@ -46,7 +46,7 @@ func TestRetryPanicRecovery(t *testing.T) {
 
 	recoverableErr := errors.New("recoverable")
 	SetRecoverableErrors(recoverableErr)
-	err := Do(func() error {
+	err := Do(func() interface{} {
 		if retry < 2 {
 			retry++
 			panic(recoverableErr)

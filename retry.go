@@ -44,7 +44,7 @@ func SetRecoverableErrors(errors ...error) {
 	}
 }
 
-func Do(f func() error) error {
+func Do(f func() interface{}) interface{} {
 	defer panicRecovery()
 
 	var retry = 0
@@ -54,17 +54,19 @@ func Do(f func() error) error {
 			return ErrorMaxRetriesReached
 		}
 
-		err := f()
-		if err != nil {
-			if isRecoverableErrors(err) {
-				<-time.After(time.Second * time.Duration(configs[ConfigDelaySec]))
-				retry++
+		fReturn := f()
+		if err, ok := fReturn.(error); ok {
+			if err != nil {
+				if isRecoverableErrors(err) {
+					<-time.After(time.Second * time.Duration(configs[ConfigDelaySec]))
+					retry++
 
-			} else {
-				return ErrorUnrecoverable
+				} else {
+					return ErrorUnrecoverable
+				}
 			}
 		} else {
-			return nil
+			return fReturn
 		}
 	}
 }
