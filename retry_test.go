@@ -6,21 +6,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDefaultRetry(t *testing.T) {
-
+func TestRetry(t *testing.T) {
 	err := Do(func() error {
 		return nil
 	})
 
 	assert.Nil(t, err)
+}
 
-
+func TestRetryRecover(t *testing.T) {
 	var retry = 0
 
-	err = Do(func() error {
+	recError := errors.New("recoverable")
+	SetRecoverableErrors(recError)
+	err := Do(func() error {
 		if retry < 2 {
 			retry++
-			return errors.New("recoverable")
+			return recError
 		} else {
 			return nil
 		}
@@ -28,13 +30,30 @@ func TestDefaultRetry(t *testing.T) {
 
 	assert.Equal(t, 2, retry)
 	assert.Nil(t, err)
+}
 
-
+func TestUnrecover(t *testing.T) {
 	unrecoverableError := errors.New("unrecoverable")
-	Setting(nil, []error{unrecoverableError})
-	err = Do(func() error {
+	err := Do(func() error {
 		return unrecoverableError
 	})
 
 	assert.Error(t, ErrorUnrecoverable, err)
+}
+
+func TestRetryPanicRecovery(t *testing.T) {
+	var retry = 0
+
+	recoverableErr := errors.New("recoverable")
+	SetRecoverableErrors(recoverableErr)
+	err := Do(func() error {
+		if retry < 2 {
+			retry++
+			panic(recoverableErr)
+		} else {
+			return nil
+		}
+	})
+
+	assert.Nil(t, err)
 }

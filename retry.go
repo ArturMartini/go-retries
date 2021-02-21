@@ -14,25 +14,39 @@ const (
 )
 
 var (
-	listUnrecoverableErrors []error
+	listRecoverableErrors []error
 
-	configs map[Config]int = map[Config]int{
+	configs = map[Config]int{
 		ConfigMaxRetries: defaultMaxRetries,
-		ConfigDelaySec: defaultDelaySec,
+		ConfigDelaySec:   defaultDelaySec,
 	}
 
-	ErrorMaxRetriesReached = errors.New("max retries reached")
-	ErrorUnrecoverable     = errors.New("unrecoverable error")
+	ErrorMaxRetriesReached = errors.New("retry max retries reached")
+	ErrorUnrecoverable     = errors.New("retry unrecoverable error")
 )
 
 type Config string
 
-func Setting(configurations map[Config]int, unrecoverableErrors []error) {
-	configs = configurations
-	listUnrecoverableErrors = unrecoverableErrors
+type Configuration struct {
+	Key   Config
+	Value int
+}
+
+func SetConfigurations(configurations ...Configuration) {
+	for _, c := range configurations {
+		configs[c.Key] = c.Value
+	}
+}
+
+func SetRecoverableErrors(errors ...error) {
+	for _, err := range errors {
+		listRecoverableErrors = append(listRecoverableErrors, err)
+	}
 }
 
 func Do(f func() error) error {
+	defer panicRecovery()
+
 	var retry = 0
 
 	for {
@@ -42,11 +56,12 @@ func Do(f func() error) error {
 
 		err := f()
 		if err != nil {
-			if isUnrecoverableErrors(err) {
-				return ErrorUnrecoverable
-			} else {
+			if isRecoverableErrors(err) {
 				<-time.After(time.Second * time.Duration(configs[ConfigDelaySec]))
 				retry++
+
+			} else {
+				return ErrorUnrecoverable
 			}
 		} else {
 			return nil
@@ -54,12 +69,22 @@ func Do(f func() error) error {
 	}
 }
 
-func isUnrecoverableErrors(err error) bool {
-	var isUnrecoverable = false
-	for _, recErr := range listUnrecoverableErrors {
+func isRecoverableErrors(err error) bool {
+	var isRecoverable = false
+	for _, recErr := range listRecoverableErrors {
 		if errors.Is(err, recErr) {
-			isUnrecoverable = true
+			isRecoverable = true
 		}
 	}
-	return isUnrecoverable
+	return isRecoverable
+}
+
+func panicRecovery() {
+	if r := recover(); r != nil {
+		if value, ok := r.(error); ok {
+			if !isRecoverableErrors(value) {
+				panic(value)
+			}
+		}
+	}
 }
