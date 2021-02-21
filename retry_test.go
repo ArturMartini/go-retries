@@ -56,4 +56,5 @@ func TestRetryPanicRecovery(t *testing.T) {
 	})
 
 	assert.Nil(t, err)
+	assert.Equal(t, 2, retry)
 }

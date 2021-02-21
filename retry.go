@@ -45,11 +45,16 @@ func SetRecoverableErrors(errors ...error) {
 }
 
 func Do(f func() interface{}) interface{} {
-	defer panicRecovery()
 	var retry = 0
+	var continueRecovery = true
+	defer panicRecovery(f, &retry, &continueRecovery)
+	return execRetry(f, &retry, &continueRecovery)
+}
 
+func execRetry(f func() interface{}, retry *int, continueRecovery *bool) interface{} {
 	for {
-		if retry >= configs[ConfigMaxRetries] {
+		if *retry >= configs[ConfigMaxRetries] {
+			*continueRecovery = false
 			return ErrorMaxRetriesReached
 		}
 
@@ -58,13 +63,14 @@ func Do(f func() interface{}) interface{} {
 			if err != nil {
 				if isRecoverableErrors(err) {
 					<-time.After(time.Second * time.Duration(configs[ConfigDelaySec]))
-					retry++
-
+					(*retry)++
 				} else {
+					*continueRecovery = false
 					return ErrorUnrecoverable
 				}
 			}
 		} else {
+			*continueRecovery = false
 			return fReturn
 		}
 	}
@@ -80,17 +86,17 @@ func isRecoverableErrors(err error) bool {
 	return isRecoverable
 }
 
-func panicRecovery() {
-	if r := recover(); r != nil {
-		//if value, ok := r.(error); ok {
-		//	if !isRecoverableErrors(value) {
-		//		panic(value)
-		//	}
-		//}
-		//if value, ok := r.(logrus.Entry); ok {
-		//	if !isRecoverableErrors(value.) {
-		//		panic(value)
-		//	}
-		//}
+func panicRecovery(f func() interface{}, retry *int, continueRecovery *bool) {
+	if *continueRecovery {
+		defer panicRecovery(f, retry, continueRecovery)
+		r := recover()
+		if r != nil {
+			*retry++
+			if *retry <= configs[ConfigMaxRetries] {
+				execRetry(f, retry, continueRecovery)
+			} else {
+				*continueRecovery = false
+			}
+		}
 	}
 }
