@@ -1,6 +1,10 @@
 # go-retries
 ##### This project is a library to do retries easily. You can customize configuration of delay, max retries and configuration errors unrecoverable  
 
+The default settings
+*   Max retries: 3
+*   Delay seconds: 3
+
 Simple use example below:
 ```go
 import retry "github.com/arturmartini/go-retries"
