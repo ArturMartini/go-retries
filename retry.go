@@ -36,7 +36,7 @@ func Do(f func() error) error {
 	var retry = 0
 
 	for {
-		if retry > configs[ConfigMaxRetries] {
+		if retry >= configs[ConfigMaxRetries] {
 			return ErrorMaxRetriesReached
 		}
 
