@@ -88,11 +88,14 @@ func isRecoverableErrors(err error) bool {
 
 func panicRecovery(f func() interface{}, retry *int, continueRecovery *bool) {
 	if *continueRecovery {
-		defer panicRecovery(f, retry, continueRecovery)
-		r := recover()
-		if r != nil {
+		if recover() != nil {
+			defer panicRecovery(f, retry, continueRecovery)
 			*retry++
 			execRetry(f, retry, continueRecovery)
+		}
+	} else {
+		if recover() != nil {
+			panic(recover())
 		}
 	}
 }

@@ -28,11 +28,13 @@ Use custom configuration:
 import retry "github.com/arturmartini/go-retries"
 
 func example(any string) error {
-    //Setting max retries, delay time and errors unrecoverable
-    retry.Setting(map[Config]int{
-    		retry.ConfigMaxRetries: 5,
-    		retry.ConfigDelaySec: 2,
-    	}, []error{errors.New("Unrecoverable")})
+    //Setting max retries, delay time 
+    retry.SetConfigurations(
+    		retry.Configuration{Key: retry.ConfigMaxRetries, Value: 5},
+    		retry.Configuration{Key: retry.ConfigDelaySec, Value: 5})
+    
+    //Setting recoverable errors
+    retry.SetRecoverableErrors(errGetDataSchemaRegistry)
     
     errRetry := retry.Do(func() error) error {
         var response, err = http.Get("https://example.com")
