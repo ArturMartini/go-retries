@@ -46,7 +46,6 @@ func SetRecoverableErrors(errors ...error) {
 
 func Do(f func() interface{}) interface{} {
 	defer panicRecovery()
-
 	var retry = 0
 
 	for {
@@ -83,10 +82,15 @@ func isRecoverableErrors(err error) bool {
 
 func panicRecovery() {
 	if r := recover(); r != nil {
-		if value, ok := r.(error); ok {
-			if !isRecoverableErrors(value) {
-				panic(value)
-			}
-		}
+		//if value, ok := r.(error); ok {
+		//	if !isRecoverableErrors(value) {
+		//		panic(value)
+		//	}
+		//}
+		//if value, ok := r.(logrus.Entry); ok {
+		//	if !isRecoverableErrors(value.) {
+		//		panic(value)
+		//	}
+		//}
 	}
 }
