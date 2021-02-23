@@ -88,6 +88,8 @@ func isRecoverableErrors(err error) bool {
 
 func panicRecovery(f func() interface{}, retry *int, continueRecovery *bool) {
 	if *continueRecovery {
+		<-time.After(time.Duration(configs[ConfigDelaySec]) * time.Second)
+
 		if recover() != nil {
 			defer panicRecovery(f, retry, continueRecovery)
 			*retry++
