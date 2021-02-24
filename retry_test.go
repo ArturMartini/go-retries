@@ -8,7 +8,8 @@ import (
 )
 
 func TestRetry(t *testing.T) {
-	err := Do(func() interface{} {
+
+	err := New().Do(func() interface{} {
 		return nil
 	})
 
@@ -18,9 +19,10 @@ func TestRetry(t *testing.T) {
 func TestRetryRecover(t *testing.T) {
 	var retry = 0
 
+	r := New()
 	recError := errors.New("recoverable")
-	SetRecoverableErrors(recError)
-	err := Do(func() interface{} {
+	r.SetRecoverableErrors(recError)
+	err := r.Do(func() interface{} {
 		if retry < 2 {
 			retry++
 			return recError
@@ -35,7 +37,7 @@ func TestRetryRecover(t *testing.T) {
 
 func TestUnrecover(t *testing.T) {
 	unrecoverableError := errors.New("unrecoverable")
-	err := Do(func() interface{} {
+	err := New().Do(func() interface{} {
 		return unrecoverableError
 	})
 
@@ -45,9 +47,10 @@ func TestUnrecover(t *testing.T) {
 func TestRetryPanicRecovery(t *testing.T) {
 	var retry = 0
 
+	r := New()
 	recoverableErr := errors.New("recoverable")
-	SetRecoverableErrors(recoverableErr)
-	err := Do(func() interface{} {
+	r.SetRecoverableErrors(recoverableErr)
+	err := r.Do(func() interface{} {
 		if retry < 2 {
 			retry++
 			panic(recoverableErr)
@@ -64,11 +67,12 @@ func TestRetryTime(t *testing.T) {
 	//The default delay is 3 seconds
 	//The default max retries is 3
 
+	r := New()
 	start := time.Now()
 	recoverableErr := errors.New("recoverable")
-	SetRecoverableErrors(recoverableErr)
+	r.SetRecoverableErrors(recoverableErr)
 
-	err := Do(func() interface{} {
+	err := r.Do(func() interface{} {
 			return recoverableErr
 	})
 
@@ -79,13 +83,14 @@ func TestRetryTime(t *testing.T) {
 
 func TestRetryCustomTime(t *testing.T) {
 	start := time.Now()
-	SetConfigurations(
+	r := New()
+	r.SetConfigurations(
 		Configuration{Key: ConfigMaxRetries, Value: 1},
 		Configuration{Key: ConfigDelaySec, Value: 2})
 
 	recoverableErr := errors.New("recoverable")
-	SetRecoverableErrors(recoverableErr)
-	err := Do(func() interface{} {
+	r.SetRecoverableErrors(recoverableErr)
+	err := r.Do(func() interface{} {
 		return recoverableErr
 	})
 

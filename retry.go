@@ -14,13 +14,6 @@ const (
 )
 
 var (
-	listRecoverableErrors []error
-
-	configs = map[Config]int{
-		ConfigMaxRetries: defaultMaxRetries,
-		ConfigDelaySec:   defaultDelaySec,
-	}
-
 	ErrorMaxRetriesReached = errors.New("retry max retries reached")
 	ErrorUnrecoverable     = errors.New("retry unrecoverable error")
 )
@@ -32,53 +25,72 @@ type Configuration struct {
 	Value int
 }
 
-func SetConfigurations(configurations ...Configuration) {
+type retry struct {
+	retry                 int
+	continueRecovery      bool
+	configs               map[Config]int
+	listRecoverableErrors []error
+}
+
+func New() *retry {
+	return &retry{
+		retry: 0,
+		continueRecovery: true,
+		configs: map[Config]int{
+			ConfigDelaySec:   defaultDelaySec,
+			ConfigMaxRetries: defaultMaxRetries,
+		},
+		listRecoverableErrors: []error{},
+	}
+}
+
+func (r *retry) SetConfigurations(configurations ...Configuration) {
 	for _, c := range configurations {
-		configs[c.Key] = c.Value
+		r.configs[c.Key] = c.Value
 	}
 }
 
-func SetRecoverableErrors(errors ...error) {
+func (r *retry) SetRecoverableErrors(errors ...error) {
 	for _, err := range errors {
-		listRecoverableErrors = append(listRecoverableErrors, err)
+		r.listRecoverableErrors = append(r.listRecoverableErrors, err)
 	}
 }
 
-func Do(f func() interface{}) interface{} {
-	var retry = 0
-	var continueRecovery = true
-	defer panicRecovery(f, &retry, &continueRecovery)
-	return execRetry(f, &retry, &continueRecovery)
+func (r *retry) Do(f func() interface{}) interface{} {
+	r.retry = 0
+	r.continueRecovery = true
+	defer r.panicRecovery(f)
+	return r.execRetry(f)
 }
 
-func execRetry(f func() interface{}, retry *int, continueRecovery *bool) interface{} {
+func (r *retry) execRetry(f func() interface{}) interface{} {
 	for {
-		if *retry >= configs[ConfigMaxRetries] {
-			*continueRecovery = false
+		if r.retry >= r.configs[ConfigMaxRetries] {
+			r.continueRecovery = false
 			return ErrorMaxRetriesReached
 		}
 
 		fReturn := f()
 		if err, ok := fReturn.(error); ok {
 			if err != nil {
-				if isRecoverableErrors(err) {
-					<-time.After(time.Second * time.Duration(configs[ConfigDelaySec]))
-					(*retry)++
+				if r.isRecoverableErrors(err) {
+					<-time.After(time.Second * time.Duration(r.configs[ConfigDelaySec]))
+					r.retry++
 				} else {
-					*continueRecovery = false
+					r.continueRecovery = false
 					return ErrorUnrecoverable
 				}
 			}
 		} else {
-			*continueRecovery = false
+			r.continueRecovery = false
 			return fReturn
 		}
 	}
 }
 
-func isRecoverableErrors(err error) bool {
+func (r *retry) isRecoverableErrors(err error) bool {
 	var isRecoverable = false
-	for _, recErr := range listRecoverableErrors {
+	for _, recErr := range r.listRecoverableErrors {
 		if errors.Is(err, recErr) {
 			isRecoverable = true
 		}
@@ -86,14 +98,14 @@ func isRecoverableErrors(err error) bool {
 	return isRecoverable
 }
 
-func panicRecovery(f func() interface{}, retry *int, continueRecovery *bool) {
-	if *continueRecovery {
-		<-time.After(time.Duration(configs[ConfigDelaySec]) * time.Second)
+func (r *retry) panicRecovery(f func() interface{}) {
+	if r.continueRecovery {
+		<-time.After(time.Duration(r.configs[ConfigDelaySec]) * time.Second)
 
 		if recover() != nil {
-			defer panicRecovery(f, retry, continueRecovery)
-			*retry++
-			execRetry(f, retry, continueRecovery)
+			defer r.panicRecovery(f)
+			r.retry++
+			r.execRetry(f)
 		}
 	} else {
 		if recover() != nil {
