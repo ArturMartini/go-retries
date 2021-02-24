@@ -44,16 +44,18 @@ func New() *retry {
 	}
 }
 
-func (r *retry) SetConfigurations(configurations ...Configuration) {
+func (r *retry) SetConfigurations(configurations ...Configuration) *retry {
 	for _, c := range configurations {
 		r.configs[c.Key] = c.Value
 	}
+	return r
 }
 
-func (r *retry) SetRecoverableErrors(errors ...error) {
+func (r *retry) SetRecoverableErrors(errors ...error) *retry {
 	for _, err := range errors {
 		r.listRecoverableErrors = append(r.listRecoverableErrors, err)
 	}
+	return r
 }
 
 func (r *retry) Do(f func() interface{}) interface{} {
