@@ -62,13 +62,16 @@ func (r *retry) Do(f func() interface{}) interface{} {
 	r.retry = 0
 	r.continueRecovery = true
 	defer r.panicRecovery(f)
-	return r.execRetry(f)
+	return r.execRetry(f, false)
 }
 
-func (r *retry) execRetry(f func() interface{}) interface{} {
+func (r *retry) execRetry(f func() interface{}, originPanic bool) interface{} {
 	for {
 		if r.retry >= r.configs[ConfigMaxRetries] {
 			r.continueRecovery = false
+			if originPanic {
+				panic(ErrorMaxRetriesReached)
+			}
 			return ErrorMaxRetriesReached
 		}
 
@@ -107,7 +110,7 @@ func (r *retry) panicRecovery(f func() interface{}) {
 		if recover() != nil {
 			defer r.panicRecovery(f)
 			r.retry++
-			r.execRetry(f)
+			r.execRetry(f, true)
 		}
 	} else {
 		if recover() != nil {
