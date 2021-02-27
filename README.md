@@ -10,7 +10,7 @@ Simple use example below:
 import retry "github.com/arturmartini/go-retries"
 
 func example(any string) error {
-    errRetry := retry.Do(func() error) error {
+    errRetry := retry.New().Do(func() error) error {
         var response, err = http.Get("https://example.com")
         return err 
     }
@@ -29,17 +29,15 @@ import retry "github.com/arturmartini/go-retries"
 
 func example(any string) error {
     //Setting max retries, delay time 
-    retry.SetConfigurations(
-    		retry.Configuration{Key: retry.ConfigMaxRetries, Value: 5},
-    		retry.Configuration{Key: retry.ConfigDelaySec, Value: 5})
-    
-    //Setting recoverable errors
-    retry.SetRecoverableErrors(errGetDataSchemaRegistry)
-    
-    errRetry := retry.Do(func() error) error {
-        var response, err = http.Get("https://example.com")
-        return err 
-    }
+    errRetry := New().SetConfigurations(
+    		Configuration{Key: ConfigMaxRetries, Value: 5},
+    		Configuration{Key: ConfigDelaySec, Value: 5}).
+            //Setting recoverable errors
+    		SetRecoverableErrors(errors.New("any error")).Do(func() interface{} {
+    		var response, err = http.Get("https://example.com")
+    		doSomething(response)
+    		return err		
+    	})
     
     if errRetry != nil {
         //do something
